@@ -1,0 +1,24 @@
+from astropy.io import ascii as at 
+import numpy as np
+import os
+import matplotlib.pyplot as plt
+from glob import glob
+from scipy.stats import gaussian_kde
+import pandas as pd
+from astropy.table import Table as tb
+import seaborn as sns
+import corner
+
+sns.set_style('darkgrid')
+data = pd.read_csv('isochrones/UCAC4382-066955_18.csv') 
+data2 = data.copy()                                     # Create copy of DataFrame
+data2 = data2.rename(columns = {"Teff": "T_eff (K)", "feh": "[Fe/H]", "mass":"Mass (M$_{\odot}$)", "age":"Age (Gyr)", "logg":"log(g)" })  # Using rename()
+                                        # Print updated pandas DataFrame
+
+
+b=sns.pairplot(data2,kind="kde", vars=["T_eff (K)", "log(g)", "[Fe/H]", "Mass (M$_{\odot}$)", "Age (Gyr)"], corner=True)
+#plt.xticks(fontsize=30)
+stuff=['T_eff (K)', 'log(g)', '[Fe/H]', 'Mass (M$_{\odot}$)', 'Age (Gyr)']
+
+sns.set(font_scale=2)
+
