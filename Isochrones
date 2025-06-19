@@ -1,0 +1,95 @@
+from astropy.io import ascii as at
+import numpy as np
+import os
+import matplotlib.pyplot as plt
+from glob import glob
+from scipy.stats import gaussian_kde
+import pandas as pd
+from astropy.table import Table as tb
+import seaborn as sn
+import numba
+
+def find_nearest(array, value):   
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
+    return array[idx] 
+
+
+def run_isochrones():
+    import isochrones
+    from isochrones.mist import MIST_Isochrone
+    from isochrones.mist.bc import MISTBolometricCorrectionGrid
+    from isochrones import get_ichrone, SingleStarModel
+    from isochrones.priors import FlatPrior, PowerLawPrior
+
+
+    #params = at.read("./parameters_final.csv")
+    mags = at.read("star_statsgdr3603.csv")
+    it = 50
+    for i in mags['index']:
+        bands = ['Gaia_G_DR2Rev','J','H','Ks','W1','W2']
+        if os.path.exists("/Users/ihahn/cassi/gaiadr3603/isochrones/%s_%i.csv"%(mags['id'][i],it))==False:
+            print(mags['id'][i])
+            params_iso = {'Teff':(mags['teff'][i], mags['err_teff'][i]), \
+             'logg':(mags['logg'][i], mags['err_logg'][i]), \
+             'feh':(mags['feh'][i],mags['err_feh'][i]), \
+             'parallax':(mags['plx'][i], mags['e_plx'][i])}
+             #'AV':(mags['AV'][i], mags['AV_max'][i] - mags['AV_min'][i])} 
+
+            mags_iso = {'Gaia_G_DR2Rev':(mags['Gmag'][i],mags['e_Gmag'][i]),
+              'J':(mags['Jmag'][i], mags['e_Jmag'][i]), \
+              'H':(mags['Hmag'][i], mags['e_Hmag'][i]), \
+              'Ks':(mags['Kmag'][i], mags['e_Kmag'][i])}#, \
+              #'W1':(mags['W1mag'][i], mags['e_W1mag'][i]), \
+              #'W2':(mags['W2mag'][i], mags['e_W2mag'][i])}#,\
+              #'Tycho_B':(mags['Tycho_B'][i],0.05) ,\
+              #'Tycho_V':(mags['Tycho_V'][i],0.05)}
+
+            #if mags['Galex_NUV'][i]!=-999:
+                #bands.append('GALEX_NUV')
+                #mags_iso['GALEX_NUV'] = (mags['Galex_NUV'][i],mags['e_Galex_NUV'][i])
+            
+            for k in ['u','v']:
+                if mags['SkyMapper_%s'%k][i]!=-999:
+                    bands.append('SkyMapper_%s'%k)
+                    mags_iso['SkyMapper_%s'%k] = (mags['SkyMapper_%s'%k][i],mags['e_SkyMapper_%s'%k][i])
+
+            print(mags_iso)
+            print(params_iso)
+            print(bands)
+            exit()
+            
+            mist = get_ichrone('mist', basic=False, bands=bands)
+            model1 = SingleStarModel(mist, **params_iso, **mags_iso)
+            #model1.set_prior(feh=FlatPrior((-1., 0.2)))
+            #model1._bounds['distance'] = (mags['r_lo'][i],mags['r_hi'][i])
+            #model1._bounds['age'] = (np.log10(100.07e8),np.log10(13.7e9))
+            #model1._bounds['AV'] = (.2,.3) 
+            #model1._bounds['feh'] = (-2., -1.)
+            model1.fit(refit=True,n_live_points=1000,evidence_tolerance=0.5)
+            model1.derived_samples.to_csv("/Users/ihahn/cassi/gaiadr3603/isochrones/%s_%i.csv"%(mags['id'][i],it), index_label='index')
+            model1.corner_observed()
+            plt.savefig("/Users/ihahn/cassi/gaiadr3603/isochrones/plots/%s_observed_%i.pdf"%(mags['id'][i],it))
+            model1.corner_derived(['distance', 'age', 'AV', 'feh'])
+            plt.savefig("/Users/ihahn/cassi/gaiadr3603/isochrones/plots/%s_derived_%i.pdf"%(mags['id'][i],it))
+            plt.close()
+
+def read_isochrones(): 
+    j = 50
+    f = open("iso_params_agecons.csv", "w")
+    f.write("id,teff_16,teff,teff_84,logg_16,logg,logg_84,feh_16,feh,feh_84,mass_16,mass,mass_84,age_16,age,age_84,av_16,av,av_84,distance_16,distance,distance_84,radius_16,radius,radius_84,logL_16,logL,logL_84\n")
+    name = ['gaiadr3603']
+    for i in name:
+        data = at.read('/Users/ihahn/cassi/gaiadr3603/isochrones/%s_%i.csv'%(i,j), guess=True)
+        f.write("%s,%i,%i,%i,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n"\
+          %(i,np.quantile(data['Teff'],[0.16]),np.quantile(data['Teff'],[0.5]),\
+          np.quantile(data['Teff'],[0.84]),np.quantile(data['logg'],[0.16]),\
+          np.quantile(data['logg'],[0.5]),np.quantile(data['logg'],[0.84]),\
+          np.quantile(data['feh'],[0.16]),np.quantile(data['feh'],[0.5]),np.quantile(data['feh'],[0.84]),\
+          np.quantile(data['mass'],[0.16]),np.quantile(data['mass'],[0.5]),np.quantile(data['mass'],[0.84]),\
+          (10**np.quantile(data['age'],[0.16]))/10**9,(10**np.quantile(data['age'],[0.5]))/10**9,(10**np.quantile(data['age'],[0.84]))/10**9,\
+          np.quantile(data['AV'],[0.16]),np.quantile(data['AV'],[0.5]),np.quantile(data['AV'],[0.84]),\
+          np.quantile(data['distance'],[0.16]),np.quantile(data['distance'],[0.5]),np.quantile(data['distance'],[0.84]),\
+          np.quantile(data['radius'],[0.16]),np.quantile(data['radius'],[0.5]),np.quantile(data['radius'],[0.84]),\
+          np.quantile(data['logL'],[0.16]),np.quantile(data['logL'],[0.5]),np.quantile(data['logL'],[0.84])))
+    f.close()
