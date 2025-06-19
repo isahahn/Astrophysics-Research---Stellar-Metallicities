@@ -1,0 +1,116 @@
+import q2
+data = q2.Data("stars.csv","lines_gdr3603.csv")
+sp = q2.specpars.SolvePars()
+sp.grid = 'aodfnew'
+sp.step_teff = 0
+sp.step_logg = 0
+sp.step_vt = 0.01
+
+sp.niter = 100
+#sp.step_teff = 100
+#sp.step_logg = 0.1
+#sp.step_vt = 0.1
+#sp.niter = 200
+
+
+sp.errors = True
+gaidr3603 = q2.Star('gaiadr3603')
+
+
+gaidr3603.get_data_from(data)
+
+gaidr3603.get_model_atmosphere('marcs')
+
+pp = q2.specpars.PlotPars()
+#pp.make_figure = False
+pp.figure_format = 'pdf'
+#q2.specpars.solve_one(gaidr3603,sp)
+
+q2.specpars.solve_all(data,sp,'parameters_iso_spec.csv',PlotPars=pp)
+## data = q2.Data("parameters_iso_spec.csv","gaiadr36961.csv")
+q2.specpars.fancy_ironstats_plot(gaidr3603)
+q2.abundances.get_all(data,'abundances.csv',['FeI','FeII'],grid='marcs')
+wavelength=data[wavelength]
+data = q2.Data("parameters_iso_agecons_3.csv","ews/ews_hfs.csv")
+cpd = q2.Star('cpd722713')
+hd1 = q2.Star('hd181327')
+vao = q2.Star('vaomen')
+
+cpd.get_data_from(data)
+hd1.get_data_from(data)
+vao.get_data_from(data)
+
+cpd.get_model_atmosphere('aodfnew')
+hd1.get_model_atmosphere('aodfnew')
+vao.get_model_atmosphere('aodfnew')
+#q2.abundances.get_one(cpd,['CI','OI'], silent=False)
+q2.abundances.get_one(hd1,['CI','OI'], silent=False)
+#q2.abundances.get_one(vao,['CI','OI'], silent=False)
+#elements = ['CI','OI','NaI','MgI','AlI','SiI','SI','KI','CaI','ScI','ScII','TiI','TiII','VI','CrI','CrII','MnI','FeI','FeII','NiI','CuI','ZnI','SrI','SrII','YII','BaII','LaII']
+#elements = ['LiI','CI','NI','OI']
+#q2.abundances.get_all(data,'abundances_cno.csv',elements,grid='aodfnew',errors=True)
+q2.abundances.fancy_abund_plot(hd1,'OI')
+q2.abundances.fancy_abund_plot(hd1,'CI')
+q2.abundances.fancy_abund_plot(vao,'CI')
+data = q2.Data("parameters_iso_agecons_3.csv","ews/ews_hfs.csv")
+elements = ['OI','NaI','MgI','AlI','SiI','CaI','ScII','TiI','TiII','CrI','CrII','MnI','FeI','FeII','NiI','CuI','ZnI','SrI','SrII','YII','BaII','LaII']
+elements = ['CI','OI','NaI','MgI','AlI','SiI','CaI','ScII','TiI','TiII']#,'CrI','CrII','MnI','FeI','FeII','NiI','CuI','ZnI','SrI','SrII','YII','BaII','LaII']
+
+#q2.abundances.get_one(bd80,elements, silent=False)
+#q2.abundances.get_one(g436,elements, silent=False)
+#q2.abundances.get_one(he05,elements, silent=False)
+#q2.abundances.get_one(he12,elements, silent=False)
+#q2.abundances.get_one(he22,elements, silent=False)
+#q2.abundances.get_one(sdss,elements, silent=False)
+#q2.abundances.get_one(smss,elements, silent=False)
+q2.abundances.get_all(data,'abundances.csv',elements,grid='aodfnew',errors=False)
+q2.abundances.fancy_abund_plot(g436,'SrII')
+data = q2.Data("parameters_iso.csv","ews.csv")
+bd80 = q2.Star('BD+80_0245')
+he05 = q2.Star('HE_0533-5340')
+smss = q2.Star('SMSS_J034249.53-284216.0')
+hd68 = q2.Star('HD6833')
+
+
+bd80.get_data_from(data)
+he05.get_data_from(data)
+smss.get_data_from(data)
+hd68.get_data_from(data)
+
+bd80.get_model_atmosphere('aodfnew')
+he05.get_model_atmosphere('aodfnew')
+smss.get_model_atmosphere('aodfnew')
+hd68.get_model_atmosphere('aodfnew')
+q2.moog.create_model_in(bd80,'bd80.mod',grid='aodfnew')
+10**(8.394 - 8.924)
+run codes.py
+files = ['cpd722713.txt','vaomen.txt','hd191089.txt','beta_pic_norm.txt','hd181327.txt']
+names = ['CPD-72 2713','V* AO Men','HD 191089',r'$\beta$ Pic','HD 181327']
+files = ['cpd722713.txt','hd191089.txt','beta_pic_norm.txt','hd181327.txt']
+names = ['CPD-72 2713','HD 191089',r'$\beta$ Pic','HD 181327']
+
+#files = ['hd191089.txt','beta_pic_norm.txt','hd181327.txt']
+#names = ['HD 191089',r'$\beta$ Pic','HD 181327']
+plt.figure(figsize=(10,12))
+j = 0
+for i in range(0,len(files)):
+    spec = at.read("../spectra/text_files/%s"%files[i])
+    idx = np.where((spec['col1']>=4500) & (spec['col1']<=4540))
+    plt.plot(spec['col1'][idx],spec['col2'][idx]+j,'-',label='%s'%names[i])
+    if i==0:
+        j = j + 0.15
+    else:
+        j = j+0.5
+
+plt.tick_params(axis="x", labelsize=12, which='major', length=10, top=True, labeltop=False, direction='in')
+plt.tick_params(axis='x', which='minor', length=4, direction='in', top=True, bottom=True)
+#plt.xaxis.set_minor_locator(matplotlib.ticker.AutoMinorLocator(5))
+plt.tick_params(axis="y", labelsize=12, which='major', length=10, right=True, labelright=False, direction='in')
+plt.xlabel(r'$\lambda$ ($\AA$)', fontsize=20)
+plt.ylabel('Normalized flux', fontsize=20)
+plt.grid()
+plt.legend(fontsize=12)
+plt.savefig("plots/specs.pdf", bbox_inches='tight')
+plt.show()
+plt.clf()
+plots()
